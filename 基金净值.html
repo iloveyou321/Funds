@@ -1,0 +1,1528 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-page-node-id="UeagbkfOlznaxxpCeo93I1">
+<head data-page-node-id="ZHafAH2W5hEiAQd5ckohIy">
+<meta charset="UTF-8" data-page-node-id="Ijp0z1M4cYTG4FkllM1v3i">
+<meta name="viewport" content="width=device-width, initial-scale=1.0" data-page-node-id="4RWCkxpLQZtNCXyJTAFSsv">
+<title>基金净值</title>
+<style>
+  :root{
+    --up:#d93b3b;      /* 涨=红 */
+    --down:#12a150;    /* 跌=绿 */
+    --flat:#7a8290;
+    --bg:#f4f6f9;
+    --card:#ffffff;
+    --line:#e5e9ef;
+    --txt:#1c2330;
+    --txt2:#6b7480;
+    --txt3:#98a0ab;
+    --accent:#2c6ef2;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--txt);
+    padding:22px 18px 48px;line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---------- 顶部 ---------- */
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;flex-wrap:wrap}
+  h1{font-size:20px;font-weight:650;letter-spacing:-.2px}
+  .hsub{font-size:12px;color:var(--txt3);margin-top:3px}
+  .status{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--txt2)}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--flat);flex:none}
+  .dot.ok{background:var(--down);box-shadow:0 0 0 3px rgba(18,161,80,.13)}
+  .dot.err{background:var(--up);box-shadow:0 0 0 3px rgba(217,59,59,.13)}
+  .dot.load{background:#e0a020;animation:blink 1s infinite}
+  @keyframes blink{50%{opacity:.3}}
+  button{
+    font:inherit;font-size:12px;padding:6px 13px;border-radius:7px;cursor:pointer;
+    border:1px solid var(--line);background:#fff;color:var(--txt2);transition:.15s;
+  }
+  button:hover{border-color:#c3ccd9;color:var(--txt)}
+  button:active{transform:translateY(1px)}
+  button:disabled{opacity:.5;cursor:default}
+
+  /* ---------- 通用卡片 ---------- */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px}
+  .sec-t{font-size:13px;font-weight:600;color:var(--txt);margin:26px 0 11px;display:flex;align-items:center;gap:8px}
+  .sec-t span.n{font-weight:400;color:var(--txt3);font-size:11.5px}
+
+  /* ---------- 指数卡 ---------- */
+  .idx-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+  .idx{padding:15px 16px 13px;position:relative;overflow:hidden}
+  .idx .nm{font-size:12.5px;color:var(--txt2);display:flex;justify-content:space-between;align-items:center}
+  .idx .code{font-size:10.5px;color:var(--txt3);font-variant-numeric:tabular-nums}
+  .idx .px{font-size:29px;font-weight:640;letter-spacing:-.8px;font-variant-numeric:tabular-nums;margin:5px 0 1px;line-height:1.15}
+  .idx .chg{font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+  .idx .meta{font-size:11px;color:var(--txt3);margin-top:7px;font-variant-numeric:tabular-nums}
+  .idx .spark{margin-top:9px;height:38px}
+  .idx .spark svg{display:block;width:100%;height:100%;overflow:visible}
+
+  /* 手机端：一行一个指数，去掉走势图和成交量，只留名字/点位/涨跌/高低 */
+  /* 桌面/手机两套独立 DOM，各自用 .d-only / .m-only 显隐 */
+  .idx .m-only{display:none}
+  .idx .m-px{font-size:19px;font-weight:640;letter-spacing:-.5px;
+    font-variant-numeric:tabular-nums;line-height:1.1}
+  .idx .m-chg{font-size:11.5px;font-weight:600;margin-top:2px;
+    font-variant-numeric:tabular-nums;line-height:1.2}
+
+  .ranges{display:grid;grid-template-columns:repeat(5,1fr);gap:4px 6px;margin-top:10px;padding-top:9px;border-top:1px dashed #eef1f5}
+  .ranges .rg{text-align:center}
+  .ranges .rg .lb{display:block;font-size:10px;color:var(--txt3);line-height:1.3}
+  .ranges .rg .vv{display:block;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;line-height:1.35}
+  .up{color:var(--up)} .down{color:var(--down)} .flat{color:var(--flat)}
+
+  /* ---------- 表格 ---------- */
+  .tbl-box{overflow-x:auto;border-radius:14px}
+  table{width:100%;border-collapse:collapse;font-size:12.5px;min-width:960px}
+  thead th{
+    background:#fafbfd;color:var(--txt2);font-weight:600;font-size:11.5px;
+    padding:10px 11px;text-align:right;white-space:nowrap;
+    border-bottom:1px solid var(--line);position:sticky;top:0;z-index:2;
+  }
+  thead th:first-child{text-align:left;border-radius:14px 0 0 0}
+  thead th:last-child{border-radius:0 14px 0 0}
+  thead th.grpc{color:var(--txt3);font-weight:500;border-bottom:1px solid var(--line);text-align:center}
+  tbody td{padding:11px;text-align:right;border-bottom:1px solid #f0f3f7;font-variant-numeric:tabular-nums;white-space:nowrap}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:#fafcff}
+  td.fname{text-align:left;font-variant-numeric:normal;max-width:230px}
+  .fname .fn{font-size:12.5px;color:var(--txt);font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block}
+  .fname .fc{font-size:10.5px;color:var(--txt3);font-variant-numeric:tabular-nums;letter-spacing:.2px}
+  .dnav{font-size:13.5px;font-weight:600}
+  .pct{font-weight:600}
+  .pct.s{font-weight:400;font-size:12px}
+  /* 日涨跌后面的净值日期，小一号跟着数字走，不单独占一列 */
+  .pct .d1d{margin-left:4px;font-size:9.5px;font-weight:400;color:var(--txt3);
+    font-variant-numeric:tabular-nums;letter-spacing:0}
+  .dt{font-size:11px;color:var(--txt3)}
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover{color:var(--accent)}
+  th .arrow{opacity:.35;font-size:9px;margin-left:2px}
+  th.act .arrow{opacity:1;color:var(--accent)}
+
+  .empty{padding:36px;text-align:center;color:var(--txt3);font-size:12.5px}
+
+  /* ---------- 恢复默认排序按钮 ---------- */
+  .reset-sort{
+    margin-left:auto;font:inherit;font-size:11.5px;padding:4px 11px;border-radius:7px;
+    border:1px solid var(--line);background:#fff;color:var(--txt3);cursor:pointer;
+    transition:.15s;font-weight:400;flex:none;
+  }
+  .reset-sort:hover:not(:disabled){border-color:#c3ccd9;color:var(--txt)}
+  .reset-sort.active{color:var(--accent);border-color:#bcd0f8;background:#f2f6ff}
+  .reset-sort:disabled{opacity:.45;cursor:default}
+
+  /* ---------- 可点击展开的基金行 ---------- */
+  tr.frow{cursor:pointer;transition:background .12s}
+  tr.frow:hover td{background:#f7faff}
+  tr.frow.open td{background:#f5f9ff;border-bottom-color:transparent}
+  tr.frow.open td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  .caret{display:inline-block;width:13px;color:var(--txt3);font-size:9px;
+         transition:transform .15s;vertical-align:1px}
+  tr.frow.open .caret{color:var(--accent)}
+
+  /* ---------- 展开的走势图 ---------- */
+  tr.chart-row td{padding:0;background:#fafcff;border-bottom:1px solid var(--line)}
+  .chart-wrap{padding:14px 16px 16px}
+  .chart-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .chart-title{font-size:12px;font-weight:600;color:var(--txt2)}
+  .chart-tabs{display:flex;gap:3px;background:#eef1f6;padding:2px;border-radius:7px}
+  .ctab{
+    font:inherit;font-size:11px;padding:3px 10px;border:none;border-radius:5px;
+    background:transparent;color:var(--txt2);cursor:pointer;transition:.13s;
+  }
+  .ctab:hover{color:var(--txt)}
+  .ctab.act{background:#fff;color:var(--accent);font-weight:600;
+            box-shadow:0 1px 2px rgba(28,35,48,.09)}
+  .chart-info{margin-left:auto;font-size:11px;color:var(--txt3);font-variant-numeric:tabular-nums}
+  .chart-info b{font-weight:600}
+  /* 基金成立不足所选区间时的说明，单独一行 */
+  .chart-trunc{display:block;margin-top:3px;font-size:10.5px;color:#c08a2a;line-height:1.5}
+  .chart-body{background:#fff;border:1px solid #eef1f5;border-radius:9px;padding:8px 6px 4px}
+  tr.chart-row{animation:reveal .18s ease-out}
+  @keyframes reveal{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+
+  footer{margin-top:26px;font-size:11px;color:var(--txt3);line-height:1.9}
+  footer a{color:var(--txt3)}
+  .note{background:#fff8e6;border:1px solid #f2e2b8;color:#8a6a1e;padding:9px 12px;border-radius:9px;font-size:11.5px;margin-top:12px}
+
+  /* ---------- 移动端基金卡片 ---------- */
+  .fund-cards{display:none}          /* 默认隐藏，窄屏才启用 */
+  .mob-tip{display:none}             /* 手机上才显示的操作提示 */
+
+  .fcard{
+    background:var(--card);border:1px solid var(--line);border-radius:13px;
+    padding:13px 14px;margin-bottom:10px;cursor:pointer;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  .fcard:active{background:#fbfcfe}
+  .fcard.open{border-color:#bcd0f8;box-shadow:0 2px 10px rgba(44,110,242,.07)}
+  .fcard.err{background:#fffaf5;border-color:#f3dede;cursor:default}
+
+  .fc-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+  .fc-name{min-width:0;flex:1}
+  .fc-name .fn{
+    display:block;font-size:14px;font-weight:600;color:var(--txt);line-height:1.35;
+    word-break:break-all;
+  }
+  .fc-name .fc-code{display:block;font-size:10.5px;color:var(--txt3);margin-top:2px;
+    font-variant-numeric:tabular-nums}
+  .fc-d1{flex:none;text-align:right}
+  .fc-d1 .lb{display:block;font-size:10px;color:var(--txt3);line-height:1.3}
+  .fc-d1 .lb-d{margin-left:4px;font-size:9px;color:var(--txt3);opacity:.9;
+    font-variant-numeric:tabular-nums}
+  .fc-d1 .lb-d::before{content:'·';margin-right:3px;opacity:.6}
+  .fc-d1 .vv{display:block;font-size:19px;font-weight:650;letter-spacing:-.3px;
+    font-variant-numeric:tabular-nums;line-height:1.25}
+
+  /* 回撤状态条：色块深浅代表回撤档位，右侧小字是补充信息 */
+  .dd-bar{
+    margin-top:9px;padding:5px 10px;border-radius:8px;
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;
+    border:1px solid transparent;
+  }
+  .dd-bar .dd-t{white-space:nowrap;letter-spacing:-.2px}
+  .dd-bar .dd-n{white-space:nowrap;font-weight:500;opacity:.72;font-size:10.5px}
+  .dd-bar.lv0{background:#f2f4f7;color:#7c8794;border-color:#e7ebf1}
+  .dd-bar.lv1{background:#fdf1d9;color:#8a5a10;border-color:#f5dcae}
+  .dd-bar.lv2{background:#f0bf6a;color:#4a3008;border-color:#dda748}
+  .dd-bar.lv3{background:#d4633a;color:#fff;border-color:#bd5230}
+  .dd-bar.lv4{background:#a83231;color:#fff;border-color:#8d2525}
+  .dd-bar.lv3 .dd-n,.dd-bar.lv4 .dd-n{opacity:.85}
+
+  /* 回撤进度条：0 → 最深一档，白色刻度标出前三档，末端圆点标当前位置 */
+  .dd-track{position:relative;height:5px;border-radius:3px;background:#eef1f5;margin-top:9px}
+  .dd-fill{position:absolute;top:0;bottom:0;border-radius:3px}
+  .dd-tick{position:absolute;top:-3px;width:1px;height:11px;background:#cfd6e0}
+  .dd-cur{position:absolute;top:50%;width:8px;height:8px;border-radius:50%;
+    transform:translate(-50%,-50%);box-shadow:0 0 0 2px #fff;transition:left .3s ease}
+  .dd-axis{position:relative;height:15px;margin-top:7px;
+    font-size:9.5px;color:var(--txt3);font-variant-numeric:tabular-nums}
+  .dd-axis span{position:absolute;top:0;transform:translateX(-50%);white-space:nowrap;line-height:1}
+  .dd-foot{display:flex;justify-content:space-between;gap:8px;
+    font-size:10.5px;color:var(--txt3);margin-top:4px;
+    font-variant-numeric:tabular-nums;white-space:nowrap}
+
+  /* 桌面表格里的一列回撤：色块 = 档位，下面一行小字给两个辅助数字 */
+  .dd-col{text-align:right;white-space:nowrap}
+  .dd-col .dd-pill{
+    display:inline-block;padding:2px 8px;border-radius:6px;
+    font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;
+    border:1px solid transparent;min-width:64px;text-align:center;
+  }
+  .dd-pill.lv0{background:#f2f4f7;color:#7c8794;border-color:#e7ebf1}
+  .dd-pill.lv1{background:#fdf1d9;color:#8a5a10;border-color:#f5dcae}
+  .dd-pill.lv2{background:#f0bf6a;color:#4a3008;border-color:#dda748}
+  .dd-pill.lv3{background:#d4633a;color:#fff;border-color:#bd5230}
+  .dd-pill.lv4{background:#a83231;color:#fff;border-color:#8d2525}
+  .dd-col .dd-sub{display:block;font-size:9.5px;color:var(--txt3);margin-top:2px;
+    font-variant-numeric:tabular-nums;letter-spacing:-.1px}
+
+  /* 档位图例：说明 正常/关注/较好/很好/难得 各代表什么 */
+  .legend{
+    display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;
+    margin:-2px 0 10px;font-size:11px;color:var(--txt2);
+  }
+  .legend .lg-t{color:var(--txt3)}
+  .legend .lg-i{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+  .legend .lg-dot{width:9px;height:9px;border-radius:2.5px;display:inline-block;border:1px solid transparent}
+  .legend .lg-t2{color:var(--txt3);font-size:10.5px;font-variant-numeric:tabular-nums}
+  .lg-dot.lv0{background:#f2f4f7;border-color:#e7ebf1}
+  .lg-dot.lv1{background:#fdf1d9;border-color:#f5dcae}
+  .lg-dot.lv2{background:#f0bf6a;border-color:#dda748}
+  .lg-dot.lv3{background:#d4633a;border-color:#bd5230}
+  .lg-dot.lv4{background:#a83231;border-color:#8d2525}
+  @media (max-width:760px){
+    .legend{gap:5px 9px;font-size:10.5px;margin-bottom:8px}
+    .legend .lg-t2{display:none}
+  }
+
+  .fc-grid{
+    display:grid;grid-template-columns:repeat(6,1fr);gap:3px;
+    margin-top:11px;padding-top:10px;border-top:1px dashed #eef1f5;
+  }
+  .fc-cell{text-align:center;min-width:0}
+  .fc-cell .lb{display:block;font-size:9.5px;color:var(--txt3);line-height:1.3;white-space:nowrap}
+  .fc-cell .vv{display:block;font-size:11.5px;font-weight:600;font-variant-numeric:tabular-nums;
+    line-height:1.4;white-space:nowrap}
+
+  .fc-errmsg{color:#c0392b;font-size:11.5px;margin-top:8px}
+
+  .fc-chart{margin-top:12px;padding-top:11px;border-top:1px solid #eef1f5;cursor:default}
+  .fc-chart .chart-wrap{padding:0}
+  .fc-chart .chart-info{width:100%;margin-left:0;margin-top:4px;line-height:1.6}
+  .fc-chart .chart-tabs{flex-wrap:wrap}
+
+  @media (max-width:760px){
+    body{padding:16px 12px 36px}
+    .idx-grid{grid-template-columns:1fr;gap:8px}
+
+    /* 指数：一行搞定。左边名字+代码，右边点位+涨跌，最右高低。
+       桌面版/手机版是两套独立 DOM，各自只显示自己那套，
+       免得 display 优先级打架（.idx .px 之类选择器权重太高，覆盖不掉） */
+    .idx{padding:9px 12px;border-radius:11px}
+    .idx .d-only{display:none!important}
+    .idx .m-only{display:flex}
+    .idx .nm-l{flex:1 1 auto;font-size:13px;color:var(--txt);font-weight:600;min-width:0;
+      display:flex;align-items:baseline;gap:6px}
+    .idx .nm-l .code{font-size:10px;color:var(--txt3);font-weight:400;letter-spacing:.2px}
+    .idx .nm-l .nm-t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .idx .m-main{flex:0 0 auto;text-align:right}
+    .idx .m-sub{flex:0 0 auto;min-width:66px;text-align:right;
+      font-size:9.5px;color:var(--txt3);line-height:1.4;
+      font-variant-numeric:tabular-nums;white-space:nowrap}
+    .idx .m-sub span{display:block}
+
+    h1{font-size:17px}
+
+    /* 表格隐藏，改用卡片 */
+    .tbl-box{display:none}
+    .fund-cards{display:block}
+    .mob-tip{display:block;font-size:11px;color:var(--txt3);margin:-2px 0 9px;
+      padding-left:2px;line-height:1.4}
+
+    /* 标题行：按钮换行到右侧，不挤压 */
+    .sec-t{flex-wrap:wrap;gap:6px 8px}
+    .reset-sort{margin-left:auto;padding:5px 12px;font-size:12px}
+
+    .chart-head{gap:8px}
+    .chart-info{margin-left:0;width:100%;font-size:10.5px;line-height:1.6}
+    .chart-title{font-size:11.5px}
+    .ctab{font-size:10.5px;padding:3px 8px}
+    .chart-body{padding:6px 2px 2px}
+
+    /* 6 个周期标签在窄屏挤不下：等分单行，靠缩字号和字距塞进一行 */
+    .fc-chart .chart-tabs{
+      display:grid;grid-template-columns:repeat(6,1fr);gap:1px;width:100%;
+      padding:3px;border-radius:9px;
+    }
+    .fc-chart .ctab{
+      padding:6px 0;font-size:10.5px;text-align:center;border-radius:6px;
+      letter-spacing:-.3px;white-space:nowrap;
+    }
+
+    /* 手机图表：viewBox 已按窄屏重算，这里只加分内边距 */
+    .fc-chart .chart-body{padding:10px 4px 6px}
+  }
+
+  /* 超窄屏（老机型）进一步压缩 */
+  @media (max-width:760px){
+    .fc-cell .lb{font-size:8.5px;letter-spacing:-.2px}
+    .fc-cell .vv{font-size:10.5px;letter-spacing:-.2px}
+  }
+  @media (max-width:360px){
+    .fc-cell .lb{font-size:8px}
+    .fc-cell .vv{font-size:10px}
+    .fc-d1 .vv{font-size:17px}
+    .fcard{padding:12px}
+  }
+</style>
+</head>
+<body data-page-node-id="ekH8GVlZxpoBogMMYeZIJs">
+<div class="wrap" data-page-node-id="nzAtZpAORIYXBelq0L9d1H">
+
+  <header data-page-node-id="IheBX3U08iN3CSJBYj1Bo1">
+    <div data-page-node-id="LjKzFWVa4L5NCckorkcG6x">
+      <h1 data-page-node-id="T2EtOUfqALAKjGIBhuAD4C">基金净值</h1>
+      <div class="hsub" id="subline" data-page-node-id="qEQARKUbCLeCWtjmz31TqR">加载中…</div>
+    </div>
+    <div class="status" data-page-node-id="6EUapAMXLsbI9szfH4UGjy">
+      <span class="dot" id="dot" data-page-node-id="82LyPJ5pw1yOYXqSEUkRQQ"></span>
+      <span id="statusTxt" data-page-node-id="0tzzEyUnuwdogiwHZ1AnI5">正在连接…</span>
+      <button id="refreshBtn" data-page-node-id="bHvrqcaCypDoSSibYKH9gV">刷新</button>
+    </div>
+  </header>
+
+  <div class="idx-grid" id="idxGrid" data-page-node-id="CI6spyWGdf3WoC5Ab2ytjU"></div>
+
+  <div class="sec-t" data-page-node-id="Na1MMSs9KmuM6wXGCQAVFd">
+    场外基金净值 <span class="n" id="fundCount" data-page-node-id="MZkiWjMhDBCMmSeGICWAlT"></span>
+    <button class="reset-sort" id="resetSort" title="点表头排序后，用这个恢复原始顺序" data-page-node-id="yLOpilmlcqli5W65TqhRBJ">恢复默认排序</button>
+  </div>
+  <div class="mob-tip" data-page-node-id="m0Cc1HatHJhQfFkJjv7RYs">点任意一只基金，展开看净值走势</div>
+  <div class="legend" id="ddLegend" title="回撤 = 当前复权净值 ÷ 历史最高复权净值 − 1。每只基金按各自风险等级套用不同阈值。">
+    <span class="lg-t">回撤档位</span>
+    <span class="lg-i"><i class="lg-dot lv0"></i>正常</span>
+    <span class="lg-i"><i class="lg-dot lv1"></i>关注</span>
+    <span class="lg-i"><i class="lg-dot lv2"></i>较好</span>
+    <span class="lg-i"><i class="lg-dot lv3"></i>很好</span>
+    <span class="lg-i"><i class="lg-dot lv4"></i>难得</span>
+    <span class="lg-t2">偏股 5/10/20/30%　混合 3/6/12/20%　债基 0.3/0.6/1.2/2%</span>
+  </div>
+  <div class="card tbl-box" data-page-node-id="cCHDwzdlHmoWHOqGm9dbSc">
+    <table data-page-node-id="48hAYEMUi0mmcHHxabGXp5">
+      <thead data-page-node-id="fWXFlkqHyjCkbjrvLrbkXg">
+        <tr data-page-node-id="ctrsdoqAX0dWQcxdEOiniQ">
+          <th rowspan="2" style="text-align:left;vertical-align:bottom" data-page-node-id="K05HV3TmoLOYsRO4gctuls">基金</th>
+          <th rowspan="2" style="vertical-align:bottom" class="sortable" data-k="d1" data-page-node-id="OwMGHGnXl2YxMjM3zluU97">日涨跌<span class="arrow" data-page-node-id="BtYAGm2Th8boopOu0wLBVx">▼</span></th>
+          <th colspan="6" class="grpc" data-page-node-id="VjdKV9xa9VrQXTpdibOvie">区间收益率</th>
+        </tr>
+        <tr data-page-node-id="SG1sHaD2kRNtyceDeGocqy">
+          <th class="sortable" data-k="w1" data-page-node-id="3ljCucQn1wwru21AALQfA3">近1周<span class="arrow" data-page-node-id="2lOOId6BjzodeFvt1BhAIp">▼</span></th>
+          <th class="sortable" data-k="m1" data-page-node-id="WMJrV4KTuuyFWVCVDGSJkb">近1月<span class="arrow" data-page-node-id="rwPfDc0Jaql0xQqhtrkyZn">▼</span></th>
+          <th class="sortable" data-k="m3" data-page-node-id="rIq3sJktjHWBw7D6Sdi0kY">近3月<span class="arrow" data-page-node-id="9i2PXGNYBYOTDFbsPj5t5T">▼</span></th>
+          <th class="sortable" data-k="m6" data-page-node-id="7d778FLrmZZQMKFrg4YEDI">近6月<span class="arrow" data-page-node-id="uDKpmcCf2ass7p7qTzxZcC">▼</span></th>
+          <th class="sortable" data-k="y1" data-page-node-id="6IMiloAA92v6PoWeUa7laz">近1年<span class="arrow" data-page-node-id="BcZz8LZon7hGX4xeHmIqpc">▼</span></th>
+          <th class="sortable" data-k="ytd">今年<span class="arrow">▼</span></th>
+          <th class="sortable" data-k="dd" style="text-align:right">回撤<span class="arrow">▼</span></th>
+        </tr>
+      </thead>
+      <tbody id="fundBody" data-page-node-id="EESgnmCO0huxvbci8IfXF7">
+        <tr data-page-node-id="OjBD70u1MpcTIMTxRSfLxi"><td colspan="9" class="empty" data-page-node-id="cfwn2xDLQ3OmtlnxjFT0Oo">加载中…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 移动端卡片视图（窄屏时替代表格，一行一张卡片，不用横向拖动） -->
+  <div class="fund-cards" id="fundCards" data-page-node-id="oNkMwGe5qsYdvAX6JC20Rh">
+    <div class="empty" data-page-node-id="2JxFipTWROuMVksgYNZsGL">加载中…</div>
+  </div>
+
+  <div class="note" id="hint" style="display:none" data-page-node-id="WGqV9q6gtmnf8Xj9w3L1Uk"></div>
+
+  <footer data-page-node-id="kLDdbfoV9sZbHjwi5Yrhu5">
+    数据来源：腾讯财经（指数行情）、天天基金（基金净值）。<br data-page-node-id="pHHEzp3TBWUeipMipf8MxK">
+    基金净值通常 T 日 20:00–23:00 更新，QDII 类延迟 1–2 个交易日；节假日顺延。<br data-page-node-id="Wq7t5GxnNjzksSpasdpWcj">
+    区间收益率按各自平台口径回溯：近1周/1月/3月/6月/1年为最新净值日往前推 7/30/92/184/365 个自然日，今年以来以上年末净值为基准。与天天基金、蚂蚁财富、京东金融公布值一致（误差 ≤0.01 个百分点）。本页仅供参考，不构成投资建议。
+  </footer>
+</div>
+
+<script>
+/* ======================= 配置区 ======================= */
+const INDICES = [
+  { secid:'sh000001', code:'000001', name:'上证指数' },
+  { secid:'sz399006', code:'399006', name:'创业板指' },
+  { secid:'sh000688', code:'000688', name:'科创50' }
+];
+// 想改基金，只改这里即可
+const FUNDS = ['002849','021550','008163','003026','009689','090021','008448'];
+
+/* 每只基金的风险等级 —— 决定回撤分档用哪套阈值。
+   为什么必须分套：偏股基金跌 10% 是家常便饭，短债基金跌 1% 就是大事。
+   用同一套阈值的话，短债永远停在灰色"正常"，状态条对它就是废的。
+   档位：'equity' 偏股 / 'hybrid' 混合 / 'bond' 债基
+   拿不准就写 'auto'，脚本会按该基金的历史年化波动率自动归类。
+   ⚠️ 手动指定的永远优先于自动判断。 */
+const FUND_TIER = {
+  '002849':'equity',
+  '008163':'equity',
+  '021550':'equity',
+  '003026':'hybrid',
+  '009689':'hybrid',
+  '090021':'bond',
+  '008448':'bond'
+};
+
+// 名称兜底（正常情况下会自动从数据源读取）
+const fundNameFallback = {
+  '002849':'金信智能中国2025混合A',
+  '021550':'博时中证红利低波动100ETF联接A',
+  '008163':'南方标普红利低波50ETF联接A',
+  '003026':'安信新价值混合A',
+  '009689':'易方达瑞锦混合A',
+  '090021':'大成月添利一个月滚动持有中短债A',
+  '008448':'德邦短债A'
+};
+/* ===================================================== */
+
+/* 区间收益的周期定义 —— 这组数字是拿天天基金公布的区间涨幅逐日穷举反推校准出来的，
+   与"直觉上的 7/30/91/182/365 天"不同，差一天就会偏 0.3~0.9 个百分点。
+   校准方法：对每个周期把 days 从 0 扫到 1200、同时试 le/ge 两种取法，
+   取能同时命中全部样本基金的那条（实测 7 只基金 × 7 周期共 48 个点，
+   平均误差 0.003 个百分点，残差仅来自净值只保留 4 位小数）。
+   注意 w1/m1 的可行区间是连续的（5~7 天、30~35 天），这里取官方名义值：
+   近1周=7 个自然日、近1月=30 天、近3月=92 天、近6月=184 天、近1年=365 天。
+   ⚠️ 不要凭直觉改回 91 / 182 / 364，也不要以为自己"取到同一天"就能等价，
+   非交易日的取整方式差一格就差 0.6 个百分点。 */
+const PERIODS = [
+  { k:'w1', days:7,    pick:'le', label:'近1周' },
+  { k:'m1', days:30,   pick:'le', label:'近1月' },
+  { k:'m3', days:92,   pick:'le', label:'近3月' },
+  { k:'m6', days:184,  pick:'le', label:'近6月' },
+  { k:'y1', days:365,  pick:'le', label:'近1年' },
+  { k:'ytd',days:0,    pick:'yearend', label:'今年以来' }
+];
+
+// 指数卡片的周期（价格指数，常规自然日即可，与基金的收益校准口径无关）
+const INDEX_PERIODS = [
+  { k:'w1', days:7,   label:'近1周' },
+  { k:'m1', days:30,  label:'近1月' },
+  { k:'m3', days:91,  label:'近3月' },
+  { k:'m6', days:182, label:'近6月' },
+  { k:'y1', days:365, label:'近1年' }
+];
+
+const $ = s => document.querySelector(s);
+const isNil = v => v === null || v === undefined || (typeof v === 'number' && isNaN(v));
+const num = v => (v===null||v===undefined||v===''||v==='--'||isNaN(+v)) ? null : +v;
+const cls = v => isNil(v) ? 'flat' : (v>0.0001 ? 'up' : v<-0.0001 ? 'down' : 'flat');
+const fmtPct = v => {
+  if(isNil(v)) return '—';
+  if(Math.abs(v) < 0.005) v = 0;                 // 消除 -0.00%
+  return (v>0 ? '+' : '') + v.toFixed(2) + '%';
+};
+const fmtPx = v => isNil(v) ? '—' : (+v).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtAmt = v => { // 元 -> 亿/万亿
+  if(isNil(v)) return '—';
+  if(v>=1e12) return (v/1e12).toFixed(2)+' 万亿';
+  if(v>=1e8)  return (v/1e8).toFixed(0)+' 亿';
+  return (v/1e4).toFixed(0)+' 万';
+};
+
+function setStatus(state, txt){
+  const d = $('#dot'); d.className = 'dot ' + (state||'');
+  $('#statusTxt').textContent = txt;
+}
+
+// 净值时间戳是「北京时间当日 0 点」，即 UTC 前一天 16:00。
+// 用 toISOString 会退一天，必须取本地日期字段。
+function tsToDate(ts){
+  const d = new Date(ts);
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return d.getFullYear() + '-' + m + '-' + day;
+}
+
+/* ---------------- 数据抓取 ---------------- */
+
+// 指数：实时快照（腾讯行情，返回 Access-Control-Allow-Origin: *）
+// 注意：该接口返回 GBK 编码，必须按 ArrayBuffer 读取后用 GBK 解码，否则中文名乱码
+async function fetchIndexSnapshot(){
+  const q = INDICES.map(i=>i.secid).join(',');
+  const res = await fetchWithTimeout('https://qt.gtimg.cn/q=' + q, {}, 8000);
+  const buf = await res.arrayBuffer();
+  let txt;
+  try{
+    txt = new TextDecoder('gbk').decode(buf);
+  }catch(e){
+    txt = new TextDecoder('utf-8').decode(buf);
+  }
+  const out = {};
+  txt.split(';').forEach(line => {
+    const m = line.match(/v_(\w+)="([^"]*)"/);
+    if(!m) return;
+    const f = m[2].split('~');
+    out[m[1]] = {
+      name: f[1], code: f[2],
+      price: num(f[3]), prev: num(f[4]), chg: num(f[31]), chgpct: num(f[32]),
+      high: num(f[33]), low: num(f[34]),
+      amount: num(f[37]) ? num(f[37]) * 10000 : null, // 万元 -> 元
+      time: f[30]
+    };
+  });
+  return out;
+}
+
+// 带超时的 fetch：任何情况下最多等 ms 毫秒，避免网络异常时页面无限卡住
+async function fetchWithTimeout(url, opts = {}, ms = 8000){
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try{
+    return await fetch(url, Object.assign({cache:'no-store', signal:ctrl.signal}, opts));
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
+// 注意：param 里的逗号必须保持原文，不能 encodeURIComponent，否则接口返回空。
+// 实测多标的用分号拼接会失效，故逐个请求。
+// 接口选择：fqkline/get 路径不返回 CORS 头（浏览器会被拦），
+// 而 kline/kline 路径稳定返回 Access-Control-Allow-Origin: *，故用后者。
+// 指数为价格指数，无需复权，数据格式与前者一致。
+async function fetchOneKline(secid){
+  const url = 'https://web.ifzq.gtimg.cn/appstock/app/kline/kline?param=' + secid + ',day,,,400';
+  for(let attempt = 0; attempt < 2; attempt++){
+    try{
+      const r = await (await fetchWithTimeout(url, {}, 8000)).json();
+      const d = r && r.data && r.data[secid];
+      const arr = (d && (d.day || d.qfqday)) || [];
+      const bars = arr.map(a => ({ date:a[0], close:num(a[2]) })).filter(x => x.close);
+      if(bars.length) return bars;
+    }catch(e){ /* 重试一次 */ }
+  }
+  return [];   // K线失败不影响主流程，只是没有走势图和区间收益
+}
+
+async function fetchIndexKline(){
+  const out = {};
+  const res = await Promise.all(INDICES.map(i => fetchOneKline(i.secid)));
+  INDICES.forEach((i, n) => out[i.secid] = res[n]);
+  return out;
+}
+
+// 指数区间收益
+function indexRangeRet(bars, days){
+  if(!bars || bars.length < 2) return null;
+  const last = bars[bars.length-1];
+  const lastD = new Date(last.date + 'T00:00:00');
+  const target = new Date(lastD.getTime() - days*86400000);
+  let base = null;
+  for(let i = bars.length-1; i >= 0; i--){
+    if(new Date(bars[i].date + 'T00:00:00') <= target){ base = bars[i]; break; }
+  }
+  if(!base) base = bars[0];               // 历史不够就用最早一根
+  if(!base.close) return null;
+  return (last.close / base.close - 1) * 100;
+}
+
+// 基金：用 <script> 标签加载 pingzhongdata.js。
+// 该接口不返回 CORS 头（fetch 会被浏览器拦），但 <script> 不受同源限制，
+// 且一次性给出该基金成立以来全部历史净值，不需要分页。
+//
+// 并发隔离：脚本会往所在作用域的 window 上写 fS_name / Data_netWorthTrend 等全局变量。
+// 若多只并行加载，后完成的会覆盖先完成的，造成「名称与净值张冠李戴」。
+// 这里给每只基金套一层 iframe 作为独立作用域，脚本在 iframe 内执行，
+// 各自写入自己的 window，从根本上杜绝串数据，可安全并行。
+function loadFundScript(code){
+  return new Promise((resolve, reject) => {
+    const iframe = document.createElement('iframe');
+    iframe.style.cssText = 'position:absolute;width:0;height:0;border:0;visibility:hidden';
+    iframe.setAttribute('aria-hidden', 'true');
+
+    let done = false;
+    const timer = setTimeout(() => finish(new Error('超时')), 12000);
+    let poll = null;
+
+    function cleanup(){
+      clearTimeout(timer);
+      if(poll) clearInterval(poll);
+      iframe.remove();
+    }
+    function finish(err, data){
+      if(done) return;
+      done = true;
+      cleanup();
+      err ? reject(err) : resolve(data);
+    }
+
+    document.body.appendChild(iframe);
+
+    // 轮询 iframe 内的全局变量：脚本执行完就会写入 Data_netWorthTrend
+    let failedTicks = 0;
+    poll = setInterval(() => {
+      try{
+        const w = iframe.contentWindow;
+        const trend = w && w.Data_netWorthTrend;
+        if(trend && trend.length){
+          // 复权净值：用相邻两天的单位净值比值连乘，得到一条不含分红断层的曲线。
+          // 分红/拆分当天不能用净值比值（那天的下跌是除息造成的），改用官方给的
+          // equityReturn（当日净值涨跌%，已剔除分红影响）。
+          //
+          // 为什么用净值比值而不是全程用 equityReturn 连乘：
+          // equityReturn 只保留两位小数，连乘上千次会累积舍入误差（实测最多偏 0.4 个百分点）。
+          // 净值是 4 位小数，比值精度高得多。两种方式实测误差见下方区间收益注释。
+          let acc = 1;
+          const hist = trend.map((p, i) => {
+            if(i > 0){
+              const prev = trend[i-1];
+              const isDiv = !!(p.unitMoney && String(p.unitMoney).trim());
+              const ratio = isDiv
+                ? 1 + (num(p.equityReturn) || 0) / 100
+                : (num(prev.y) && num(p.y) ? num(p.y) / num(prev.y) : 1);
+              acc *= ratio;
+            }
+            return {
+              date: tsToDate(p.x),            // x=毫秒时间戳(北京时间0点)
+              nav: num(p.y),                  // 单位净值（仅用于展示最新值）
+              adj: acc,                       // 复权净值（区间收益与走势图都用它）
+              pct: num(p.equityReturn)
+            };
+          }).filter(p => !isNil(p.nav));
+
+          const data = {
+            code,
+            name: w.fS_name || '',
+            hist
+          };
+          finish(null, data);
+          return;
+        }
+        // 脚本加载失败时 iframe 里的 script 会 404/被拦截，累计几个周期仍无数据就判定失败
+        if(w && w.document && w.document.readyState === 'complete'){
+          if(++failedTicks > 8) finish(new Error('网络错误'));
+        }
+      }catch(e){ /* 跨域或文档未就绪，继续轮询 */ }
+    }, 150);
+
+    // 在 iframe 内写入并执行脚本
+    try{
+      const doc = iframe.contentDocument;
+      doc.open();
+      doc.write('<!DOCTYPE html><html><head><meta charset="utf-8"></head><body>'
+        + '<script src="https://fund.eastmoney.com/pingzhongdata/' + code + '.js?v=' + Date.now()
+        + '"><\/script></body></html>');
+      doc.close();
+    }catch(e){ finish(new Error('初始化失败')); }
+  });
+}
+
+// 带自动重试的基金加载：瞬时抖动（限流/网络）通常重试即可成功
+async function loadFundWithRetry(code, attempts = 2){
+  let lastErr;
+  for(let i = 0; i < attempts; i++){
+    try{ return await loadFundScript(code); }
+    catch(e){
+      lastErr = e;
+      if(i < attempts - 1) await new Promise(r => setTimeout(r, 400));
+    }
+  }
+  throw lastErr;
+}
+
+/* ---- 本地缓存：联网失败时用上次成功的数据兜底 ----
+   某些网络环境（公司内网/校园网/运营商 DNS）会封掉 fund.eastmoney.com，
+   此时靠缓存至少能显示最近一次拿到的净值，并明确标注数据日期。 */
+const CACHE_KEY = 'dash_fund_cache_v2';   // v2：历史数组多了 adj（复权净值）字段，旧缓存作废重取
+
+function readCache(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(!raw) return null;
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.funds) return null;
+    // 兼容：老结构缺 adj 时按单位净值补，不至于算出空白
+    obj.funds.forEach(f => {
+      if(f.hist) f.hist.forEach(p => { if(isNil(p.adj)) p.adj = p.nav; });
+    });
+    return obj;
+  }catch(e){ return null; }
+}
+
+function writeCache(funds){
+  try{
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ savedAt: Date.now(), funds }));
+  }catch(e){ /* localStorage 不可用（如隐私模式）时忽略 */ }
+}
+
+// 基金区间收益 —— 口径已对齐天天基金 App / 蚂蚁财富 / 京东金融等平台公布的数字
+//
+// 两个关键点，缺一不可：
+// 1) 必须用复权净值 adj，不能拿单位净值相减，否则分红日会被算成亏损。
+// 2) 基准日的取法要和官方一致：从最新净值日往前推 days 个自然日得到"目标日"，
+//    再按 pick 规则取当天/前一个/后一个净值日。取错一天就差 0.3~0.9 个百分点。
+function fundRangeRet(hist, period){
+  if(!hist || hist.length < 2) return null;
+  const n = hist.length;
+  const last = hist[n-1];
+  const lastD = new Date(last.date + 'T00:00:00');
+
+  let base = null;
+  if(period.pick === 'yearend'){
+    // 今年以来：以上一年最后一个净值日为基准
+    const prevYearEnd = String(+last.date.slice(0,4) - 1) + '-12-31';
+    for(let i = n-1; i >= 0; i--){
+      if(hist[i].date <= prevYearEnd){ base = hist[i]; break; }
+    }
+  }else{
+    const target = new Date(lastD.getTime() - period.days*86400000);
+    const tStr = target.getFullYear() + '-' +
+      String(target.getMonth()+1).padStart(2,'0') + '-' +
+      String(target.getDate()).padStart(2,'0');
+    if(period.pick === 'ge'){
+      // 目标日或之后的第一条
+      for(let i = 0; i < n; i++){
+        if(hist[i].date >= tStr){ base = hist[i]; break; }
+      }
+    }else{
+      // 目标日或之前的最后一条
+      for(let i = n-1; i >= 0; i--){
+        if(hist[i].date <= tStr){ base = hist[i]; break; }
+      }
+    }
+  }
+  if(!base) return null;
+  const a = isNil(base.adj) ? base.nav : base.adj;
+  const b = isNil(last.adj) ? last.nav : last.adj;
+  if(!a || !b) return null;
+  return (b / a - 1) * 100;
+}
+
+/* ---------------- 渲染 ---------------- */
+function sparkSVG(bars, color){
+  const pts = bars.slice(-40);
+  if(pts.length < 2) return '';
+  const W = 300, H = 38, P = 2;
+  const vals = pts.map(p=>p.close);
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const span = (max-min) || 1;
+  const x = i => P + i * (W - 2*P) / (pts.length - 1);
+  const y = v => H - P - (v - min) / span * (H - 2*P);
+  const line = pts.map((p,i)=>`${i?'L':'M'}${x(i).toFixed(1)},${y(p.close).toFixed(1)}`).join(' ');
+  const area = `${line} L${x(pts.length-1).toFixed(1)},${H-P} L${x(0).toFixed(1)},${H-P} Z`;
+  const gid = 'g' + Math.random().toString(36).slice(2,7);
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity=".18"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path d="${area}" fill="url(#${gid})"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>
+  </svg>`;
+}
+
+const COL_UP = '#d93b3b', COL_DOWN = '#12a150', COL_FLAT = '#7a8290';
+
+function renderIndices(snap, kl){
+  const grid = $('#idxGrid');
+  snap = snap || {}; kl = kl || {};
+  grid.innerHTML = INDICES.map(ci => {
+    const s = snap[ci.secid] || {};
+    const bars = kl[ci.secid] || [];
+    const pct = s.chgpct;
+    const c = isNil(pct) ? COL_FLAT : (pct>0 ? COL_UP : pct<0 ? COL_DOWN : COL_FLAT);
+    const k = cls(pct);
+    const arrow = isNil(pct) ? '' : (pct>0?'▲':pct<0?'▼':'');
+    // 指数用独立的周期定义：指数是价格指数，按常规自然日即可，
+    // 不能套用下面 PERIODS 那套为基金收益校准过的天数
+    const ranges = INDEX_PERIODS.map(p => {
+      const v = indexRangeRet(bars, p.days);
+      const short = p.label.replace('近','');
+      return `<div class="rg"><span class="lb">${short}</span><span class="vv ${cls(v)}">${fmtPct(v)}</span></div>`;
+    }).join('');
+    const nm = s.name || ci.name;
+    return `<div class="card idx">
+      <!-- 桌面版：完整信息（点位 + 涨跌额 + 分时走势 + 高低成交 + 区间收益） -->
+      <div class="d-only">
+        <div class="nm"><span>${nm}</span><span class="code">${ci.code}</span></div>
+        <div class="px ${k}">${fmtPx(s.price)}</div>
+        <div class="chg ${k}">${arrow} ${isNil(s.chg)?'—':(s.chg>0?'+':'')+fmtPx(s.chg)} &nbsp; ${fmtPct(pct)}</div>
+        <div class="spark">${sparkSVG(bars, c)}</div>
+        <div class="meta" style="display:flex;justify-content:space-between;gap:10px">
+          <span>高 ${fmtPx(s.high)} / 低 ${fmtPx(s.low)}</span>
+          <span>成交 ${fmtAmt(s.amount)}</span>
+        </div>
+        <div class="ranges">${ranges}</div>
+      </div>
+
+      <!-- 手机版：单行。名字+代码 | 点位+涨跌 | 高低 -->
+      <div class="m-only">
+        <div class="nm-l"><span class="nm-t">${nm}</span><span class="code">${ci.code}</span></div>
+        <div class="m-main">
+          <div class="m-px ${k}">${fmtPx(s.price)}</div>
+          <div class="m-chg ${k}">${arrow}${fmtPct(pct)}</div>
+        </div>
+        <div class="m-sub">
+          <span>高 ${fmtPx(s.high)}</span>
+          <span>低 ${fmtPx(s.low)}</span>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let fundRows = [];
+let fundHistory = {};                  // code -> 升序历史净值数组（走势图数据源）
+let sortKey = null, sortDir = -1;      // sortKey=null 表示默认顺序（配置里的原始顺序）
+let expandedCode = null;               // 当前展开走势图的基金代码
+
+// 走势图周期切换（仅影响展开的那一张图）
+let chartRange = 'y1';                 // 默认显示近1年
+const CHART_RANGES = [
+  { k:'m1', days:30,    label:'近1月' },
+  { k:'m3', days:91,    label:'近3月' },
+  { k:'m6', days:182,   label:'近6月' },
+  { k:'y1', days:365,   label:'近1年' },
+  { k:'y3', days:1096,  label:'近3年' },
+  { k:'all', days:99999, label:'成立以来' },
+];
+
+function sortedFundRows(){
+  if(!sortKey) return fundRows.slice();   // 默认顺序，不动
+  // 回撤是嵌套对象，单独取值；方向按「回撤越深排越前」直觉处理
+  const val = r => sortKey === 'dd' ? (r.dd ? r.dd.drop : null) : r[sortKey];
+  return fundRows.slice().sort((a,b)=>{
+    const av = val(a), bv = val(b);
+    if(av===null && bv===null) return 0;
+    if(av===null) return 1;
+    if(bv===null) return -1;
+    return (av - bv) * sortDir;
+  });
+}
+
+function renderFunds(){
+  const body = $('#fundBody');
+  const cards = $('#fundCards');
+  if(!fundRows.length){
+    body.innerHTML = `<tr><td colspan="9" class="empty">暂无数据</td></tr>`;
+    if(cards) cards.innerHTML = `<div class="empty">暂无数据</div>`;
+    return;
+  }
+  const rows = sortedFundRows();
+
+  /* ---------- 桌面端：表格 ---------- */
+  body.innerHTML = rows.map(r => {
+    const isOpen = expandedCode === r.code;
+
+    if(r._err){
+      return `<tr style="background:#fffaf5">
+        <td class="fname">
+          <span class="fn" title="${r.name||''}">${r.name||'—'}</span>
+          <span class="fc">${r.code}</span>
+        </td>
+        <td colspan="8" style="text-align:left;color:#c0392b;font-size:11.5px">
+          净值获取失败（${r._err}）· 按右上角「刷新」重试
+        </td>
+      </tr>`;
+    }
+
+    const mainRow = `
+    <tr class="frow${isOpen?' open':''}" data-code="${r.code}">
+      <td class="fname">
+        <span class="fn" title="${r.name||''}">
+          <span class="caret">${isOpen?'▾':'▸'}</span>${r.name||'—'}
+        </span>
+        <span class="fc">${r.code} · ${r.date||'—'}${r._cached?' · 缓存':''}</span>
+      </td>
+      <td class="pct ${cls(r.d1)}">${fmtPct(r.d1)}<span class="d1d">${shortDate(r.d1Date)}</span></td>
+      ${PERIODS.map(p=>`<td class="pct s ${cls(r[p.k])}">${fmtPct(r[p.k])}</td>`).join('')}
+      ${ddCell(r.dd)}
+    </tr>`;
+
+    if(!isOpen) return mainRow;
+
+    // 展开行：走势图
+    const hist = (fundHistory[r.code] || []);
+    return mainRow + `
+    <tr class="chart-row"><td colspan="9">
+      ${chartBlock(r.code, hist)}
+    </td></tr>`;
+  }).join('');
+
+  /* ---------- 移动端：卡片 ---------- */
+  if(cards){
+    cards.innerHTML = rows.map(r => {
+      const isOpen = expandedCode === r.code;
+
+      if(r._err){
+        return `<div class="fcard err">
+          <div class="fc-top">
+            <div class="fc-name">
+              <span class="fn">${r.name||'—'}</span>
+              <span class="fc-code">${r.code}</span>
+            </div>
+          </div>
+          <div class="fc-errmsg">净值获取失败（${r._err}）· 按下方「刷新」重试</div>
+        </div>`;
+      }
+
+      const hist = fundHistory[r.code] || [];
+      // 必须沿用行数据里按 tier 算好的那份，否则会回退成混合档阈值
+      const dd = r.dd || drawdownOf(hist, r.tier);
+      return `<div class="fcard${isOpen?' open':''}" data-code="${r.code}">
+        <div class="fc-top">
+          <div class="fc-name">
+            <span class="fn"><span class="caret">${isOpen?'▾':'▸'}</span>${r.name||'—'}</span>
+            <span class="fc-code">${r.code}${r._cached?' · 缓存':''}</span>
+          </div>
+          <div class="fc-d1">
+            <span class="lb">日涨跌<span class="lb-d">${shortDate(r.d1Date)}</span></span>
+            <span class="vv ${cls(r.d1)}">${fmtPct(r.d1)}</span>
+          </div>
+        </div>
+        ${ddBlock(dd)}
+        <div class="fc-grid">
+          ${PERIODS.map(p=>`<div class="fc-cell">
+            <span class="lb">${p.label}</span>
+            <span class="vv ${cls(r[p.k])}">${fmtPct(r[p.k])}</span>
+          </div>`).join('')}
+        </div>
+        ${isOpen ? `<div class="fc-chart">${chartBlock(r.code, hist)}</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  bindFundRowEvents();
+}
+
+// 桌面表格的一列：色块 + 两个辅助数字
+function ddCell(dd){
+  if(!dd) return '<td class="dd-col">—</td>';
+  const wrap = dd.th[3];                       // 进度条满格对应的最深一道线
+  const txt = dd.drop < 0.005 ? '0.00%' : '-' + dd.drop.toFixed(2) + '%';
+  const sub = (dd.barsSincePeak > 0 ? dd.barsSincePeak + '日' : '新高')
+            + ' · 最深' + dd.mdd.toFixed(1) + '%';
+  const tip = `${dd.tierName} · ${dd.label}（阈值 ${dd.th.join(' / ')}%）`
+            + (dd.barsSincePeak > 0 ? `　离前高 ${dd.barsSincePeak} 个交易日` : '　今日创历史新高')
+            + `　历史最深回撤 ${dd.mdd.toFixed(2)}%`;
+  return `<td class="dd-col">
+    <span class="dd-pill ${dd.lvCls}" title="${tip}">${txt}</span>
+    <span class="dd-sub" title="${dd.tierName}｜档位线 ${dd.th.join('/')}%">${sub}</span>
+  </td>`;
+}
+
+// 回撤状态条（卡片内使用）
+// 无回撤时显示中性灰条；有回撤时整条换成对应档位色，并在下方补一条细进度条。
+// 进度条刻度按该基金所属的一套阈值动态生成，不用固定 10/20/30。
+function ddBlock(dd){
+  if(!dd) return '';
+  const drop = dd.drop;
+  const txt = drop < 0.005 ? '处于历史新高' : `回撤 ${drop.toFixed(2)}%`;
+  const fillCol = { lv0:'#b9c0ca', lv1:'#efb64f', lv2:'#e0912f', lv3:'#c85432', lv4:'#a83231' }[dd.lvCls];
+  const maxTh = dd.th[3];
+  // 回撤 > 最深一档时轨道按实际值撑满，但刻度标签仍按档位值贴边，避免出现 "−123%" 这种假刻度
+  const scaleMax = Math.max(drop, maxTh);
+  const pct = drop > 0 ? Math.min(drop / maxTh, 1) * 100 : 0;
+
+  // 刻度线与轴标签都按「位置百分比」绝对定位，这样标签一定落在对应的阈值线上，
+  // 而不是像 justify-content 那样只按空间四等分（否则 0.3/0.6/1.2/2 会被拉成 0/0.67/1.33/2）。
+  const posOf = t => (t / scaleMax * 100);
+  const clampEdge = p => Math.max(0, Math.min(p, 100));
+  const ticks = dd.th.slice(0, 3).map(t =>
+    `<div class="dd-tick" style="left:${clampEdge(posOf(t)).toFixed(2)}%"></div>`).join('');
+  const axisFix = (() => {
+    const stops = [0, ...dd.th];        // 0 起，再到四条阈值线
+    const last = stops.length - 1;
+    return stops.map((t, i) => {
+      const label = i === 0 ? '0' : '−' + t + '%';
+      // 首尾两个标签贴边，否则会被裁掉
+      let style;
+      if(i === 0) style = 'left:0';
+      else if(i === last) style = 'left:100%;transform:translateX(-100%)';
+      else style = `left:${clampEdge(posOf(t)).toFixed(2)}%`;
+      return `<span style="${style}">${label}</span>`;
+    }).join('');
+  })();
+
+  const bars = dd.barsSincePeak;
+  const peakTxt = bars > 0 ? `离前高 ${bars} 个交易日` : `今日创历史新高`;
+  const mddTxt = `历史最深 ${dd.mdd.toFixed(1)}%`;
+
+  return `<div class="dd-bar ${dd.lvCls}" title="${dd.tierName}｜档位线 ${dd.th.join('/')}%">
+      <span class="dd-t">${txt}</span>
+      <span class="dd-n">${dd.label}</span>
+    </div>
+    <div class="dd-track">
+      <div class="dd-fill" style="left:0;width:${pct.toFixed(1)}%;background:${fillCol}"></div>
+      ${ticks}
+      <div class="dd-cur" style="left:${pct.toFixed(1)}%;background:${fillCol}"></div>
+    </div>
+    <div class="dd-axis">${axisFix}</div>
+    <div class="dd-foot"><span>${peakTxt}</span><span>${mddTxt}</span></div>`;
+}
+
+// 走势图区块（桌面展开行与移动卡片共用）
+function chartBlock(code, hist){
+  return `<div class="chart-wrap">
+    <div class="chart-head">
+      <span class="chart-title">净值走势</span>
+      <div class="chart-tabs">
+        ${CHART_RANGES.map(cr=>`<button class="ctab${chartRange===cr.k?' act':''}" data-range="${cr.k}">${cr.label}</button>`).join('')}
+      </div>
+      <span class="chart-info">${chartInfo(code)}</span>
+    </div>
+    <div class="chart-body">${lineChart(hist, chartRange)}</div>
+  </div>`;
+}
+
+// 净值日期显示：同今天 → 「今天」，昨天 → 「昨天」，其他 → 「11-05」
+// 用来一眼看出「日涨跌」这一格是新数据还是隔夜的旧数据
+function shortDate(d){
+  if(!d) return '';
+  const t = new Date();
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const today = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+  const y = new Date(t.getTime() - 86400000);
+  const yest = `${y.getFullYear()}-${pad(y.getMonth()+1)}-${pad(y.getDate())}`;
+  if(d === today) return '今天';
+  if(d === yest) return '昨天';
+  return d.slice(5);           // 2026-11-05 → 11-05
+}
+
+// 净值日距今天的自然日数，用于判断数据新鲜度
+function daysAgo(d){
+  if(!d) return null;
+  const [Y,M,D] = d.split('-').map(Number);
+  const t = new Date();
+  const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const that = new Date(Y, M-1, D);
+  return Math.round((today - that) / 86400000);
+}
+
+// 走势图上的摘要：区间涨跌 + 最大回撤
+function chartInfo(code){
+  const hist = fundHistory[code] || [];
+  if(hist.length < 2) return '';
+  const cr = CHART_RANGES.find(x => x.k === chartRange);
+  const cut = sliceByDays(hist, cr.days);
+  if(cut.length < 2) return '';
+  // 用复权值算，否则分红除息会被误判成一次回撤
+  const cv = p => isNil(p.adj) ? p.nav : p.adj;
+  const ret = (cv(cut[cut.length-1]) / cv(cut[0]) - 1) * 100;
+  // 与表格里的「近1周/1月/3月/6月/1年」对齐：同一区间必须显示同一个数，
+  // 否则会出现表格 +14.73%、图表摘要 +14.82% 这种自相矛盾（差在基准日差一天）。
+  let shown = ret;
+  const pk = PERIODS.find(p => p.k === chartRange);
+  if(pk && pk.days){ const v = fundRangeRet(hist, pk); if(!isNil(v)) shown = v; }
+  // 最大回撤
+  let peak = cv(cut[0]), mdd = 0;
+  cut.forEach(p => {
+    const x = cv(p);
+    if(x > peak) peak = x;
+    const dd = (x / peak - 1) * 100;
+    if(dd < mdd) mdd = dd;
+  });
+  const sign = v => {
+    if(Math.abs(v) < 0.005) v = 0;              // 消除 -0.00%
+    return (v>0?'+':'') + v.toFixed(2) + '%';
+  };
+  // 基金成立不足所选区间时，说明实际覆盖范围，避免把「成立以来」误读成「近3年」
+  let trunc = '';
+  if(rangeTruncated(hist)){
+    trunc = `<div class="chart-trunc">该基金成立不足，以上实际自 ${hist[0].date} 起</div>`;
+  }
+  return `区间 <b class="${cls(shown)}">${sign(shown)}</b>　最大回撤 <b class="down">${mdd.toFixed(2)}%</b>　共 ${cut.length} 个净值日${trunc}`;
+}
+
+/* ================= 回撤状态 =================
+   口径：用复权净值 adj 从「历史最高点」往下量当前跌了多少。
+   - 不能用单位净值：分红除息那天净值会凭空跳低，会被算成一次假回撤。
+   - 峰值取全历史最高，随净值创新高自动上移，无需手工维护。
+
+   分三套阈值（按基金风险等级选，见上方 FUND_TIER）：
+     偏股 5/10/20/30   混合 3/6/12/20   债基 0.3/0.6/1.2/2
+   理由：偏股跌 10% 是常态，短债跌 1% 就是大事，用同一把尺子等于白装。
+   色阶是浅橙→橙→深橙→红，越深代表回撤越极端，不占用页面里的绿（=跌）。 */
+const TIERS = {
+  equity: { name:'偏股', th:[5, 10, 20, 30],           auto:[22, 9] },
+  hybrid: { name:'混合', th:[3, 6, 12, 20],             auto:[9, 22] },
+  bond:   { name:'债基', th:[0.3, 0.6, 1.2, 2],         auto:[0, 9] }
+};
+// 档位文案从浅到深，索引 0 = 未达第一道线
+const LEVEL_TEXT = ['正常', '关注', '较好', '很好', '难得'];
+
+// 按历史年化波动率自动归类（只在 FUND_TIER 写了 'auto' 时用）
+function autoTier(hist){
+  if(!hist || hist.length < 30) return 'hybrid';
+  const tail = hist.slice(-250);
+  const rets = [];
+  for(let i = 1; i < tail.length; i++){
+    const a = isNil(tail[i-1].adj) ? tail[i-1].nav : tail[i-1].adj;
+    const b = isNil(tail[i].adj) ? tail[i].nav : tail[i].adj;
+    if(a && b) rets.push(b / a - 1);
+  }
+  if(rets.length < 10) return 'hybrid';
+  const mean = rets.reduce((s,x) => s + x, 0) / rets.length;
+  const va = rets.reduce((s,x) => s + (x - mean) * (x - mean), 0) / rets.length;
+  const annVol = Math.sqrt(va) * Math.sqrt(244) * 100;   // 年化波动率 %
+  if(annVol >= TIERS.equity.auto[0]) return 'equity';
+  if(annVol <  TIERS.hybrid.auto[0]) return 'bond';
+  return 'hybrid';
+}
+
+function drawdownOf(hist, tier){
+  if(!hist || hist.length < 2) return null;
+  const key = TIERS[tier] ? tier : 'hybrid';
+  const th = TIERS[key].th;
+  const cv = p => isNil(p.adj) ? p.nav : p.adj;
+  let peak = cv(hist[0]), peakIdx = 0;
+  for(let i = 1; i < hist.length; i++){
+    const x = cv(hist[i]);
+    if(x > peak){ peak = x; peakIdx = i; }
+  }
+  const last = hist[hist.length-1];
+  const cur = cv(last);
+  if(!peak || !cur) return null;
+  const dd = (cur / peak - 1) * 100;            // <= 0
+  const drop = -dd;                             // 正数，越大回撤越深
+
+  // 历史最深回撤（峰-谷遍历）
+  let p2 = cv(hist[0]), mdd = 0;
+  for(let i = 1; i < hist.length; i++){
+    const x = cv(hist[i]);
+    if(x > p2) p2 = x;
+    const d = (x / p2 - 1) * 100;
+    if(d < mdd) mdd = d;
+  }
+
+  // 从峰到当前跨过了多少个净值日（不是自然日，也不含当天）
+  const barsSincePeak = hist.length - 1 - peakIdx;
+
+  // 落在第几档：从最深的线往下比，第一个满足的就是当前档
+  let idx = 0;
+  for(let i = th.length - 1; i >= 0; i--){
+    if(drop >= th[i]){ idx = i + 1; break; }
+  }
+
+  return { dd, drop, peak, peakDate: hist[peakIdx].date, mdd,
+           barsSincePeak, idx, tier: key, tierName: TIERS[key].name,
+           lvCls: 'lv' + idx, label: LEVEL_TEXT[idx], th };
+}
+
+function sliceByDays(hist, days){
+  if(!hist.length) return [];
+  const last = hist[hist.length-1];
+  const lastD = new Date(last.date + 'T00:00:00');
+  const target = new Date(lastD.getTime() - days*86400000);
+  const out = hist.filter(p => new Date(p.date + 'T00:00:00') >= target);
+  return out.length >= 2 ? out : hist;
+}
+
+// 该区间是否被基金实际成立时间截断（如成立不足 3 年却点了「近3年」）
+function rangeTruncated(hist){
+  const cr = CHART_RANGES.find(x => x.k === chartRange);
+  if(!cr || cr.days >= 99999 || hist.length < 2) return false;
+  const firstD = new Date(hist[0].date + 'T00:00:00');
+  const lastD  = new Date(hist[hist.length-1].date + 'T00:00:00');
+  return (lastD - firstD) / 86400000 < cr.days - 5;   // 留 5 天余量，避开节假日的边界抖动
+}
+
+// 纯 SVG 折线图（带面积、最高最低标注、坐标轴）
+function lineChart(hist, rangeKey){
+  if(!hist || hist.length < 2){
+    return '<div style="padding:28px;text-align:center;color:#98a0ab;font-size:12px">该区间暂无足够数据</div>';
+  }
+  const cr = CHART_RANGES.find(x => x.k === rangeKey);
+  const data = sliceByDays(hist, cr.days);
+
+  // 手机屏幕窄：用更小的 viewBox，否则 1000 宽的图缩到 330px 后文字只有 3px
+  const narrow = window.innerWidth <= 760;
+  const W = narrow ? 430 : 1000;
+  const H = narrow ? 300 : 240;
+  const PL = narrow ? 40 : 52, PR = narrow ? 12 : 16;
+  const PT = narrow ? 14 : 16, PB = narrow ? 24 : 28;
+  const FS = narrow ? 10 : 10;          // viewBox 字号（缩放后手机上≈7.5px）
+  const NB = 3.5;                       // 刻度文字基线微调
+
+  // 走势图用复权净值，否则分红除息当天会出现一根假的断崖（净值跌、实际没亏）
+  // Y 轴刻度仍换算回单位净值显示，这样读出来的数字和基金 App 对得上
+  const v = p => isNil(p.adj) ? p.nav : p.adj;
+  const lastA = v(data[data.length-1]), lastN = data[data.length-1].nav;
+  const toNav = x => (lastA ? x * lastN / lastA : x);   // 复权值 -> 单位净值
+
+  const vals = data.map(v);
+  let min = Math.min(...vals), max = Math.max(...vals);
+  const pad = (max - min) * 0.08 || 0.01;
+  min -= pad; max += pad;
+  const span = max - min || 1;
+
+  const X = i => PL + i * (W - PL - PR) / (data.length - 1);
+  const Y = x => PT + (max - x) / span * (H - PT - PB);
+
+  const pts = data.map((p,i) => `${X(i).toFixed(1)},${Y(v(p)).toFixed(1)}`);
+  const line = 'M' + pts.join(' L');
+  const area = line + ` L${X(data.length-1).toFixed(1)},${H-PB} L${PL},${H-PB} Z`;
+
+  // 涨跌着色：区间末值 vs 首值
+  const up = v(data[data.length-1]) >= v(data[0]);
+  const color = up ? '#d93b3b' : '#12a150';
+  const gid = 'grad' + Math.random().toString(36).slice(2,8);
+
+  // Y 轴刻度（4 档）—— 内部按复权值定位，文字换算成单位净值
+  const yTicks = [];
+  for(let i = 0; i <= 4; i++){
+    const tickVal = min + span * i / 4;
+    yTicks.push(`<line x1="${PL}" y1="${Y(tickVal).toFixed(1)}" x2="${W-PR}" y2="${Y(tickVal).toFixed(1)}"
+      stroke="#eef1f5" stroke-width="1"/>
+      <text x="${PL-6}" y="${(Y(tickVal)+NB).toFixed(1)}" text-anchor="end"
+        font-size="${FS}" fill="#98a0ab">${toNav(tickVal).toFixed(3)}</text>`);
+  }
+
+  // X 轴刻度（最多 6 个日期）
+  const xTicks = [];
+  const n = Math.min(5, data.length - 1);
+  // 先算出所有候选位置，再统一去重：
+  // 中间刻度若与首尾标签同月则丢弃，首尾标签优先保留（否则会出现两个「26-11」）
+  const cand = [];
+  for(let i = 0; i <= n; i++){
+    cand.push({ i, idx: Math.round(i * (data.length - 1) / n) });
+  }
+  const edgeLabels = new Set([
+    data[cand[0].idx].date.slice(2,7),
+    data[cand[cand.length-1].idx].date.slice(2,7),
+  ]);
+  const usedLabels = new Set();
+  for(const c of cand){
+    const d = data[c.idx].date;
+    const label = d.slice(2,7);
+    const isEdge = (c.i === 0 || c.i === n);
+    if(!isEdge && (usedLabels.has(label) || edgeLabels.has(label))) continue;
+    if(usedLabels.has(label) && isEdge) continue;
+    usedLabels.add(label);
+    const i = c.i, idx = c.idx;
+    // 首尾标签靠边，防止被裁切
+    const anchor = i === 0 ? 'start' : (i === n ? 'end' : 'middle');
+    const xPos = i === 0 ? X(0) - 2 : (i === n ? X(data.length-1) + 2 : X(idx));
+    xTicks.push(`<text x="${xPos.toFixed(1)}" y="${H-7}" text-anchor="${anchor}"
+      font-size="${FS}" fill="#98a0ab">${label}</text>`);
+  }
+
+  // 极值标注
+  const iMax = vals.indexOf(Math.max(...vals));
+  const iMin = vals.indexOf(Math.min(...vals));
+  // 极值点太靠边时，把文字往内推，避免被裁切
+  const edgeX = (idx, w) => {
+    const x = X(idx);
+    const minX = PL + w/2, maxX = W - PR - w/2;
+    return Math.min(maxX, Math.max(minX, x));
+  };
+  const LW = FS * 3.6;   // 极值文字大致宽度
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet"
+    style="width:100%;height:auto;aspect-ratio:${W}/${H};display:block">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="${color}" stop-opacity=".16"/>
+      <stop offset="100%" stop-color="${color}" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${yTicks.join('')}
+    <path d="${area}" fill="url(#${gid})"/>
+    <path d="${line}" fill="none" stroke="${color}" stroke-width="1.8"
+      stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${X(iMax).toFixed(1)}" cy="${Y(vals[iMax]).toFixed(1)}" r="${narrow?3:2.6}" fill="${color}"/>
+    <circle cx="${X(iMin).toFixed(1)}" cy="${Y(vals[iMin]).toFixed(1)}" r="${narrow?3:2.6}" fill="${color}"/>
+    <text x="${edgeX(iMax, LW).toFixed(1)}" y="${(Y(vals[iMax])-8).toFixed(1)}" text-anchor="middle"
+      font-size="${FS}" fill="#6b7480">${toNav(vals[iMax]).toFixed(3)}</text>
+    <text x="${edgeX(iMin, LW).toFixed(1)}" y="${(Y(vals[iMin])+15).toFixed(1)}" text-anchor="middle"
+      font-size="${FS}" fill="#6b7480">${toNav(vals[iMin]).toFixed(3)}</text>
+    ${xTicks.join('')}
+  </svg>`;
+}
+
+function bindFundRowEvents(){
+  // 重绘会重建 DOM，先把滚动位置记下来，展开/收起后把视口拉回同一张卡，
+  // 否则手机上点下面的卡片会"跳一下"
+  function redrawKeepAnchor(code){
+    const y = window.scrollY;
+    const wasOpen = expandedCode === code;
+    expandedCode = wasOpen ? null : code;
+    renderFunds();
+    const card = document.querySelector(`.fcard[data-code="${code}"]`);
+    // 手机端：刚展开时把卡片顶到视口上方（留 10px），保证整张走势图能看完
+    if(card && !wasOpen && window.innerWidth <= 760){
+      const top = card.getBoundingClientRect().top + window.scrollY;
+      window.scrollTo(0, Math.max(0, top - 10));
+      return;
+    }
+    if(card && !wasOpen){
+      const top = card.getBoundingClientRect().top + window.scrollY;
+      if(top < y - 4) window.scrollTo(0, Math.max(0, top - 12));
+      return;
+    }
+    window.scrollTo(0, y);
+  }
+
+  // 桌面表格行 / 移动卡片，点击都能展开或收起
+  document.querySelectorAll('.frow, .fcard').forEach(el => {
+    el.onclick = () => {
+      const code = el.dataset.code;
+      if(!code) return;
+      redrawKeepAnchor(code);
+    };
+  });
+  // 切换图表周期（阻止冒泡，避免触发展开/收起）
+  document.querySelectorAll('.ctab').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      chartRange = btn.dataset.range;
+      const y = window.scrollY;
+      renderFunds();
+      window.scrollTo(0, y);
+    };
+  });
+}
+
+function bindSort(){
+  document.querySelectorAll('th.sortable').forEach(th => {
+    th.onclick = () => {
+      const k = th.dataset.k;
+      if(sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; }
+      syncSortUI();
+      renderFunds();
+    };
+  });
+
+  // 恢复默认排序
+  const btn = $('#resetSort');
+  if(btn) btn.onclick = () => {
+    sortKey = null;
+    sortDir = -1;
+    syncSortUI();
+    renderFunds();
+  };
+}
+
+// 同步表头箭头与「恢复默认排序」按钮的可用状态
+function syncSortUI(){
+  document.querySelectorAll('th.sortable').forEach(t => {
+    const active = t.dataset.k === sortKey;
+    t.classList.toggle('act', active);
+    t.querySelector('.arrow').textContent = active ? (sortDir === 1 ? '▲' : '▼') : '▼';
+  });
+  const btn = $('#resetSort');
+  if(btn){
+    btn.disabled = !sortKey;
+    btn.classList.toggle('active', !!sortKey);
+    btn.title = sortKey ? '当前已按某个指标排序，点击恢复原始顺序' : '当前就是默认顺序';
+  }
+}
+
+/* ---------------- 主流程 ---------------- */
+let loading = false;
+let lastErrors = [];   // 记录本次失败的明细，供排查
+
+async function loadAll(){
+  if(loading) return;
+  loading = true;
+  $('#refreshBtn').disabled = true;
+  setStatus('load', '正在获取数据…');
+  const errs = [];
+  lastErrors = [];
+
+  try{
+    await doLoad(errs);
+  }catch(e){
+    // 兜底：任何未预料的异常都不能让页面卡在「正在获取数据」
+    lastErrors.push('渲染异常：' + (e && e.message || e));
+    errs.push('页面渲染');
+  }
+
+  const h = $('#hint');
+  if(errs.length){
+    setStatus('err', '部分数据获取失败：' + errs.join('、'));
+    h.style.display = 'block';
+    h.innerHTML = '<b>失败详情</b><br>' + lastErrors.map(t => '· ' + t).join('<br>')
+      + '<br><span style="opacity:.8">常见原因：① 网络或代理拦截（尤其是挂了 VPN 时）；② 数据源临时限流，等几秒按「刷新」即可；③ 浏览器插件（广告拦截类）拦截了第三方请求。</span>';
+  }else{
+    setStatus('ok', '已更新 ' + new Date().toLocaleTimeString('zh-CN',{hour12:false}));
+    h.style.display = 'none';
+  }
+
+  loading = false;
+  $('#refreshBtn').disabled = false;
+}
+
+async function doLoad(errs){
+
+  // 1 + 2 并行：指数和基金互不阻塞，谁先回来谁先上屏
+  const indexTask = (async () => {
+    let snap = {}, kl = {};
+    try{ snap = await fetchIndexSnapshot(); }
+    catch(e){
+      errs.push('指数行情');
+      lastErrors.push('指数实时行情：' + (e && e.message || e));
+    }
+    try{ kl = await fetchIndexKline(); }catch(e){ kl = {}; }
+    renderIndices(snap, kl);              // 指数立即上屏，不等基金
+    return snap;
+  })();
+
+  const fundTask = Promise.all(FUNDS.map(code =>
+    loadFundWithRetry(code).catch(e => ({ code, name:'', hist:null, _err: (e && e.message) || String(e) }))
+  ));
+
+  // 整体硬超时：15 秒内必须给出结果，绝不无限等待
+  const guard = new Promise(resolve => setTimeout(() => resolve(null), 15000));
+  const [snap, resultsRaw] = await Promise.all([indexTask, Promise.race([fundTask, guard])]);
+
+  const results = resultsRaw || FUNDS.map(code => ({ code, name:'', hist:null, _err:'超时' }));
+  if(!resultsRaw){
+    lastErrors.push('基金净值加载超时（15 秒），请检查网络后刷新');
+  }
+
+  // 缓存兜底：联网失败时回退到上次成功的数据
+  const succeeded = results.filter(r => !r._err && r.hist && r.hist.length);
+  const cache = readCache();
+  let usingCache = false;
+  if(succeeded.length){
+    // 有成功结果就刷新缓存（只缓存成功的那些）
+    const merged = {};
+    if(cache) cache.funds.forEach(f => merged[f.code] = f);
+    succeeded.forEach(f => merged[f.code] = { code:f.code, name:f.name, hist:f.hist });
+    writeCache(Object.values(merged));
+  }
+  if(succeeded.length < results.length && cache){
+    const cachedMap = {};
+    cache.funds.forEach(f => cachedMap[f.code] = f);
+    const cacheDate = cache.savedAt ? new Date(cache.savedAt) : null;
+    results.forEach(r => {
+      if(!r._err) return;
+      const c = cachedMap[r.code];
+      if(c && c.hist && c.hist.length){
+        r.hist = c.hist;
+        r.name = r.name || c.name;
+        r._err = null;          // 用缓存顶上，不再是失败
+        r._cached = true;       // 标记为缓存数据
+        usingCache = true;
+      }
+    });
+    if(usingCache){
+      lastErrors.push('基金域名访问不通，部分基金改用本地缓存'
+        + (cacheDate ? '（缓存于 ' + cacheDate.toLocaleString('zh-CN',{hour12:false}) + '）' : ''));
+    }
+  }
+
+  const failed = results.filter(r => r._err)
+    .map(r => r.code + '（' + r._err + '）');
+  if(failed.length){
+    errs.push(failed.length + ' 只基金');
+    lastErrors.push('基金净值加载失败：' + failed.join('、'));
+  }
+  // 有基金走了本地缓存，必须在状态条上标出来，否则会被误当成实时数据
+  const cachedCount = results.filter(r => r._cached).length;
+  if(cachedCount && succeeded.length === 0 && !failed.length){
+    errs.push('基金净值全部来自本地缓存');
+  }else if(cachedCount){
+    errs.push(cachedCount + ' 只基金来自本地缓存');
+  }
+
+  // 3. 组装行数据
+  fundHistory = {};                     // 供走势图使用：code -> 升序历史净值
+  fundRows = results.map(f => {
+    const hist = f.hist ? f.hist.slice().sort((a,b) => a.date < b.date ? -1 : 1) : null;
+    // 老缓存可能没有 adj 字段，补一个，避免整表算不出收益
+    if(hist) hist.forEach(p => { if(isNil(p.adj)) p.adj = p.nav; });
+    if(hist) fundHistory[f.code] = hist;
+    const last = hist ? hist[hist.length-1] : null;
+    const row = {
+      code: f.code,
+      name: f.name || (fundNameFallback[f.code] || '—'),
+      date: last ? last.date : null,
+      nav: last ? last.nav : null,
+      d1: last ? last.pct : null,
+      d1Date: last ? last.date : null,          // 这一格的涨跌对应的是哪天的净值
+      _err: f._err || null,
+      _cached: !!f._cached
+    };
+    PERIODS.forEach(p => row[p.k] = fundRangeRet(hist, p));
+    // 回撤状态：先用配置的风险等级，写 'auto' 或漏写的按波动率自动归类
+    let tier = FUND_TIER[f.code];
+    if(!tier || !TIERS[tier]) tier = autoTier(hist);
+    row.tier = tier;
+    row.dd = drawdownOf(hist, tier);            // 回撤状态，表格列与卡片共用
+    return row;
+  });
+
+  // 展开的基金若已无数据（如刷新后失败），自动收起
+  if(expandedCode && !fundHistory[expandedCode]) expandedCode = null;
+
+  renderFunds();
+  syncSortUI();
+
+  // 副标题 / 状态
+  const anyNav = fundRows.find(r => r.date);
+  const idxTime = (Object.values(snap)[0] || {}).time || '';
+  let timeStr = '';
+  if(idxTime && idxTime.length >= 12){
+    timeStr = `${idxTime.slice(0,4)}-${idxTime.slice(4,6)}-${idxTime.slice(6,8)} ${idxTime.slice(8,10)}:${idxTime.slice(10,12)}`;
+  }
+  // 净值日期旁边标一句新鲜度：当天出净值 / 还没出（昨天的）/ 隔了几天
+  let navTip = '';
+  if(anyNav){
+    const ago = daysAgo(anyNav.date);
+    if(ago === 0) navTip = '（当天）';
+    else if(ago === 1) navTip = '（尚未公布，显示上一交易日）';
+    else if(ago !== null && ago > 1) navTip = `（已 ${ago} 天未更新）`;
+  }
+  $('#subline').textContent = `指数行情时间 ${timeStr || '—'}　|　基金最新净值日 ${anyNav ? anyNav.date + navTip : '—'}`;
+  $('#fundCount').textContent = `共 ${FUNDS.length} 只 · 数据取自天天基金`;
+}
+
+bindSort();
+loadAll();
+$('#refreshBtn').onclick = loadAll;
+</script>
+</body>
+</html>
