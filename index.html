@@ -94,6 +94,9 @@
   .dnav{font-size:13.5px;font-weight:600}
   .pct{font-weight:600}
   .pct.s{font-weight:400;font-size:12px}
+  /* 日涨跌后面的净值日期，小一号跟着数字走，不单独占一列 */
+  .pct .d1d{margin-left:4px;font-size:9.5px;font-weight:400;color:var(--txt3);
+    font-variant-numeric:tabular-nums;letter-spacing:0}
   .dt{font-size:11px;color:var(--txt3)}
   th.sortable{cursor:pointer;user-select:none}
   th.sortable:hover{color:var(--accent)}
@@ -169,6 +172,9 @@
     font-variant-numeric:tabular-nums}
   .fc-d1{flex:none;text-align:right}
   .fc-d1 .lb{display:block;font-size:10px;color:var(--txt3);line-height:1.3}
+  .fc-d1 .lb-d{margin-left:4px;font-size:9px;color:var(--txt3);opacity:.9;
+    font-variant-numeric:tabular-nums}
+  .fc-d1 .lb-d::before{content:'·';margin-right:3px;opacity:.6}
   .fc-d1 .vv{display:block;font-size:19px;font-weight:650;letter-spacing:-.3px;
     font-variant-numeric:tabular-nums;line-height:1.25}
 
@@ -871,7 +877,7 @@ function renderFunds(){
         </span>
         <span class="fc">${r.code} · ${r.date||'—'}${r._cached?' · 缓存':''}</span>
       </td>
-      <td class="pct ${cls(r.d1)}">${fmtPct(r.d1)}</td>
+      <td class="pct ${cls(r.d1)}">${fmtPct(r.d1)}<span class="d1d">${shortDate(r.d1Date)}</span></td>
       ${PERIODS.map(p=>`<td class="pct s ${cls(r[p.k])}">${fmtPct(r[p.k])}</td>`).join('')}
       ${ddCell(r.dd)}
     </tr>`;
@@ -913,7 +919,7 @@ function renderFunds(){
             <span class="fc-code">${r.code}${r._cached?' · 缓存':''}</span>
           </div>
           <div class="fc-d1">
-            <span class="lb">日涨跌</span>
+            <span class="lb">日涨跌<span class="lb-d">${shortDate(r.d1Date)}</span></span>
             <span class="vv ${cls(r.d1)}">${fmtPct(r.d1)}</span>
           </div>
         </div>
@@ -1010,6 +1016,30 @@ function chartBlock(code, hist){
     </div>
     <div class="chart-body">${lineChart(hist, chartRange)}</div>
   </div>`;
+}
+
+// 净值日期显示：同今天 → 「今天」，昨天 → 「昨天」，其他 → 「11-05」
+// 用来一眼看出「日涨跌」这一格是新数据还是隔夜的旧数据
+function shortDate(d){
+  if(!d) return '';
+  const t = new Date();
+  const pad = n => (n < 10 ? '0' : '') + n;
+  const today = `${t.getFullYear()}-${pad(t.getMonth()+1)}-${pad(t.getDate())}`;
+  const y = new Date(t.getTime() - 86400000);
+  const yest = `${y.getFullYear()}-${pad(y.getMonth()+1)}-${pad(y.getDate())}`;
+  if(d === today) return '今天';
+  if(d === yest) return '昨天';
+  return d.slice(5);           // 2026-11-05 → 11-05
+}
+
+// 净值日距今天的自然日数，用于判断数据新鲜度
+function daysAgo(d){
+  if(!d) return null;
+  const [Y,M,D] = d.split('-').map(Number);
+  const t = new Date();
+  const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+  const that = new Date(Y, M-1, D);
+  return Math.round((today - that) / 86400000);
 }
 
 // 走势图上的摘要：区间涨跌 + 最大回撤
@@ -1452,6 +1482,7 @@ async function doLoad(errs){
       date: last ? last.date : null,
       nav: last ? last.nav : null,
       d1: last ? last.pct : null,
+      d1Date: last ? last.date : null,          // 这一格的涨跌对应的是哪天的净值
       _err: f._err || null,
       _cached: !!f._cached
     };
@@ -1477,7 +1508,15 @@ async function doLoad(errs){
   if(idxTime && idxTime.length >= 12){
     timeStr = `${idxTime.slice(0,4)}-${idxTime.slice(4,6)}-${idxTime.slice(6,8)} ${idxTime.slice(8,10)}:${idxTime.slice(10,12)}`;
   }
-  $('#subline').textContent = `指数行情时间 ${timeStr || '—'}　|　基金最新净值日 ${anyNav ? anyNav.date : '—'}`;
+  // 净值日期旁边标一句新鲜度：当天出净值 / 还没出（昨天的）/ 隔了几天
+  let navTip = '';
+  if(anyNav){
+    const ago = daysAgo(anyNav.date);
+    if(ago === 0) navTip = '（当天）';
+    else if(ago === 1) navTip = '（尚未公布，显示上一交易日）';
+    else if(ago !== null && ago > 1) navTip = `（已 ${ago} 天未更新）`;
+  }
+  $('#subline').textContent = `指数行情时间 ${timeStr || '—'}　|　基金最新净值日 ${anyNav ? anyNav.date + navTip : '—'}`;
   $('#fundCount').textContent = `共 ${FUNDS.length} 只 · 数据取自天天基金`;
 }
 
